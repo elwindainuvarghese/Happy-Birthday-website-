@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday!</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="container">
+        <!-- Phase 1: The Candle -->
+        <div id="phase-1" class="phase active">
+            <div class="candle-container">
+                <div class="candle">
+                    <div class="flame" id="flame"></div>
+                    <div class="wick"></div>
+                    <div class="wax"></div>
+                </div>
+            </div>
+            <button id="blow-btn" class="glass-btn pulse">Blow out the candle 🌬️</button>
+            <p class="mic-hint">Or blow into your microphone!</p>
+        </div>
+
+        <!-- Phase 2: The Cake -->
+        <div id="phase-2" class="phase">
+            <h2 class="glow-text">Tap the cake! 🎂</h2>
+            <div class="cake-container" id="cake">
+                <div class="cake">
+                    <div class="layer layer-top">
+                        <div class="icing"></div>
+                        <div class="candles-on-cake">
+                            <div class="mini-candle"></div>
+                            <div class="mini-candle"></div>
+                            <div class="mini-candle"></div>
+                        </div>
+                    </div>
+                    <div class="layer layer-middle"></div>
+                    <div class="layer layer-bottom"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 3: The Message -->
+        <div id="phase-3" class="phase">
+            <div class="glass-card zoom-in">
+                <h1>Happy Birthday, buddy! 🎉</h1>
+                <p>
+                    Even though we don’t really know each other, I couldn’t help but wish you.<br>
+                    I hope <span class="highlight">your leg heals soon</span>, and that you’re <span class="highlight">back to flying</span> and doing what you love ✨.<br>
+                    Until then, please <span class="highlight">take proper rest and take care of yourself</span> ❤️.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
