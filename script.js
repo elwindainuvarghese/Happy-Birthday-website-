@@ -147,8 +147,10 @@ document.addEventListener('DOMContentLoaded', () => {
         for(let i=0; i<numDrips; i++) {
             const angle = (i / numDrips) * Math.PI * 2;
             const dripLength = 0.5 + Math.random() * 1.5;
-            const dripGeo = new THREE.CapsuleGeometry(0.2, dripLength, 8, 8);
+            // Use SphereGeometry and scale it because CapsuleGeometry is not in r128
+            const dripGeo = new THREE.SphereGeometry(0.2, 16, 16);
             const drip = new THREE.Mesh(dripGeo, colorMat);
+            drip.scale.set(1, dripLength / 0.4, 1);
             drip.position.set(Math.cos(angle) * radius, -dripLength/2, Math.sin(angle) * radius);
             icingGroup.add(drip);
         }
