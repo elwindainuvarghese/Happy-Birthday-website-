@@ -171,82 +171,136 @@ document.addEventListener('DOMContentLoaded', () => {
     // Background Canvas Logic (Floating Hearts)
     // ---------------------------------------------------------
     function initBackground() {
-        const canvas = document.getElementById('bg-canvas');
-        const ctx = canvas.getContext('2d');
-        let width, height;
-        let hearts = [];
+        const container = document.getElementById('webgl-container');
+        if(!container) return;
+        
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0xffc0cb, 0.002);
 
-        function resize() {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 30;
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        // Particle System
+        const particleGeometry = new THREE.BufferGeometry();
+        const particleCount = 2000;
+        const posArray = new Float32Array(particleCount * 3);
+        
+        for(let i = 0; i < particleCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 100;
+        }
+        
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.2,
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particlesMesh = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particlesMesh);
+
+        // Floating 3D Shapes (Crazy aesthetic)
+        const shapes = [];
+        const geometries = [
+            new THREE.TorusGeometry(1, 0.3, 16, 100),
+            new THREE.OctahedronGeometry(1.5),
+            new THREE.IcosahedronGeometry(1)
+        ];
+        
+        const shapeMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0xffb6c1,
+            metalness: 0.1,
+            roughness: 0.2,
+            transmission: 0.9,
+            thickness: 0.5
+        });
+
+        for(let i = 0; i < 25; i++) {
+            const geometry = geometries[Math.floor(Math.random() * geometries.length)];
+            const mesh = new THREE.Mesh(geometry, shapeMaterial);
+            
+            mesh.position.set(
+                (Math.random() - 0.5) * 60,
+                (Math.random() - 0.5) * 60,
+                (Math.random() - 0.5) * 40 - 10
+            );
+            
+            mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+            
+            const scale = Math.random() * 2 + 0.5;
+            mesh.scale.set(scale, scale, scale);
+            
+            scene.add(mesh);
+            shapes.push({
+                mesh: mesh,
+                rotSpeedX: (Math.random() - 0.5) * 0.02,
+                rotSpeedY: (Math.random() - 0.5) * 0.02,
+                floatSpeed: (Math.random() - 0.5) * 0.05
+            });
         }
 
-        window.addEventListener('resize', resize);
-        resize();
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
 
-        class Heart {
-            constructor() {
-                this.x = Math.random() * width;
-                this.y = height + Math.random() * 100;
-                this.size = Math.random() * 20 + 10;
-                this.speedY = Math.random() * 1 + 0.5;
-                this.speedX = (Math.random() - 0.5) * 0.5;
-                this.opacity = Math.random() * 0.5 + 0.1;
-                this.color = `rgba(255, 255, 255, ${this.opacity})`;
-            }
+        const pointLight1 = new THREE.PointLight(0xff69b4, 2, 100);
+        pointLight1.position.set(0, 0, 20);
+        scene.add(pointLight1);
+        
+        const pointLight2 = new THREE.PointLight(0xffd700, 1, 100);
+        pointLight2.position.set(20, 20, 0);
+        scene.add(pointLight2);
 
-            update() {
-                this.y -= this.speedY;
-                this.x += this.speedX;
+        // Mouse Interactivity
+        let mouseX = 0;
+        let mouseY = 0;
+        
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        });
 
-                // Gentle sway
-                this.x += Math.sin(this.y * 0.01) * 0.5;
-
-                if (this.y < -this.size) {
-                    this.y = height + this.size;
-                    this.x = Math.random() * width;
-                }
-            }
-
-            draw() {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.scale(this.size / 20, this.size / 20); // Normalize size based on 20px base
-
-                // Draw heart shape
-                ctx.beginPath();
-                ctx.moveTo(0, 5);
-                ctx.bezierCurveTo(0, 0, -10, 0, -10, 10);
-                ctx.bezierCurveTo(-10, 20, 0, 25, 0, 35);
-                ctx.bezierCurveTo(0, 25, 10, 20, 10, 10);
-                ctx.bezierCurveTo(10, 0, 0, 0, 0, 5);
-                ctx.fillStyle = this.color;
-                ctx.fill();
-                ctx.closePath();
-
-                ctx.restore();
-            }
-        }
-
-        // Create hearts
-        const heartCount = Math.floor(window.innerWidth / 30); // Responsive amount
-        for (let i = 0; i < heartCount; i++) {
-            hearts.push(new Heart());
-            // Randomize initial positions so they don't all start at bottom
-            hearts[i].y = Math.random() * height; 
-        }
+        // Animation Loop
+        const clock = new THREE.Clock();
 
         function animate() {
-            ctx.clearRect(0, 0, width, height);
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
 
-            hearts.forEach(heart => {
-                heart.update();
-                heart.draw();
+            // Rotate particle field
+            particlesMesh.rotation.y = -elapsedTime * 0.05;
+            particlesMesh.rotation.x = elapsedTime * 0.02;
+
+            // Parallax mouse effect
+            camera.position.x += (mouseX * 5 - camera.position.x) * 0.05;
+            camera.position.y += (mouseY * 5 - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+
+            // Animate shapes
+            shapes.forEach((obj, index) => {
+                obj.mesh.rotation.x += obj.rotSpeedX;
+                obj.mesh.rotation.y += obj.rotSpeedY;
+                obj.mesh.position.y += Math.sin(elapsedTime * 2 + obj.floatSpeed * 100) * 0.01;
             });
 
-            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
         }
 
         animate();
+
+        // Responsive handling
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     }
 });

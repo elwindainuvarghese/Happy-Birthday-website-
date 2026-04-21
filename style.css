@@ -20,7 +20,7 @@ body, html {
     background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
 }
 
-#bg-canvas {
+#webgl-container {
     position: absolute;
     top: 0;
     left: 0;
