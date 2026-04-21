@@ -4,303 +4,302 @@ document.addEventListener('DOMContentLoaded', () => {
     const phase2 = document.getElementById('phase-2');
     const phase3 = document.getElementById('phase-3');
     
-    // Interactive Elements
-    const flame = document.getElementById('flame');
     const blowBtn = document.getElementById('blow-btn');
-    const cake = document.getElementById('cake');
 
-    // Setup initial state
     phase1.classList.add('active');
-    initBackground();
 
-    // ---------------------------------------------------------
-    // Phase 1: The Candle Logic
-    // ---------------------------------------------------------
-    
-    // Button click handling
-    blowBtn.addEventListener('click', blowOutCandle);
+    // --- THREE.JS SETUP ---
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x1a0b2e, 0.015); // Darker space-like crazy background
 
-    // Microphone setup for blowing out candle
-    let audioContext;
-    let microphone;
-    let analyser;
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5, 20);
 
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.toneMapping = THREE.ReinhardToneMapping;
+    container.appendChild(renderer.domElement);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambientLight);
+
+    // Crazy Background Particles
+    const particleGeo = new THREE.BufferGeometry();
+    const particleCount = 3000;
+    const posArray = new Float32Array(particleCount * 3);
+    for(let i = 0; i < particleCount * 3; i++) {
+        posArray[i] = (Math.random() - 0.5) * 150;
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    const particleMat = new THREE.PointsMaterial({ size: 0.15, color: 0xff69b4, transparent: true, blending: THREE.AdditiveBlending });
+    const particlesMesh = new THREE.Points(particleGeo, particleMat);
+    scene.add(particlesMesh);
+
+    // --- 3D CRAZY CANDLE ---
+    const candleGroup = new THREE.Group();
+    scene.add(candleGroup);
+
+    // Wax
+    const waxGeo = new THREE.CylinderGeometry(1.5, 1.5, 8, 32);
+    const waxMat = new THREE.MeshPhysicalMaterial({ color: 0xfffafa, roughness: 0.1, transmission: 0.3, thickness: 2 });
+    const wax = new THREE.Mesh(waxGeo, waxMat);
+    wax.position.y = 4;
+    candleGroup.add(wax);
+
+    // Wick
+    const wickGeo = new THREE.CylinderGeometry(0.1, 0.1, 1);
+    const wickMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
+    const wick = new THREE.Mesh(wickGeo, wickMat);
+    wick.position.y = 8.5;
+    candleGroup.add(wick);
+
+    // Flame (Dynamic mesh)
+    const flameGeo = new THREE.ConeGeometry(0.8, 2.5, 16);
+    const flameMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending });
+    const flame = new THREE.Mesh(flameGeo, flameMat);
+    flame.position.y = 10;
+    candleGroup.add(flame);
+
+    const flameLight = new THREE.PointLight(0xffaa00, 5, 50);
+    flameLight.position.y = 10;
+    candleGroup.add(flameLight);
+
+    // Floating wax drops
+    const drops = [];
+    for(let i = 0; i < 5; i++) {
+        const dropGeo = new THREE.SphereGeometry(0.2, 8, 8);
+        const drop = new THREE.Mesh(dropGeo, waxMat);
+        drop.position.set((Math.random()-0.5)*3, Math.random()*8, (Math.random()-0.5)*3);
+        candleGroup.add(drop);
+        drops.push(drop);
+    }
+
+    // --- 3D CRAZY CAKE ---
+    const cakeGroup = new THREE.Group();
+    cakeGroup.position.y = -20; // Hidden below initially
+    scene.add(cakeGroup);
+
+    const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xff69b4, metalness: 0.2, roughness: 0.1, transmission: 0.8, thickness: 1.5, clearcoat: 1.0 });
+    const goldMat = new THREE.MeshPhysicalMaterial({ color: 0xffd700, metalness: 0.8, roughness: 0.2 });
+    const blueMat = new THREE.MeshPhysicalMaterial({ color: 0x4d4dff, metalness: 0.5, roughness: 0.1, transmission: 0.5, thickness: 1.0 });
+
+    // Tier 1
+    const tier1 = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 4, 64), glassMat);
+    tier1.position.y = 2;
+    cakeGroup.add(tier1);
+
+    // Tier 2
+    const tier2 = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 3, 64), goldMat);
+    tier2.position.y = 5.5;
+    cakeGroup.add(tier2);
+
+    // Tier 3
+    const tier3 = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 3, 64), blueMat);
+    tier3.position.y = 8.5;
+    cakeGroup.add(tier3);
+
+    // Crazy rotating rings
+    const rings = [];
+    for(let i=0; i<3; i++) {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(8 - i*1.5, 0.2, 16, 100), new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true }));
+        ring.position.y = 2 + i*3.5;
+        ring.rotation.x = Math.PI / 2;
+        cakeGroup.add(ring);
+        rings.push(ring);
+    }
+
+    // Floating 3D mini candles on the cake
+    for(let i = 0; i < 5; i++) {
+        const miniCandle = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.5, 16), waxMat);
+        const angle = (i / 5) * Math.PI * 2;
+        miniCandle.position.set(Math.cos(angle)*2, 10.75, Math.sin(angle)*2);
+        
+        const miniFlame = new THREE.PointLight(0xffaa00, 2, 10);
+        miniFlame.position.set(0, 1, 0);
+        miniCandle.add(miniFlame);
+        
+        cakeGroup.add(miniCandle);
+    }
+
+    const cakeLight = new THREE.PointLight(0xff69b4, 0, 50); // Off initially
+    cakeLight.position.y = 15;
+    cakeGroup.add(cakeLight);
+
+    // --- ANIMATION STATE ---
+    let currentPhase = 1;
+    let clock = new THREE.Clock();
+
+    // Interaction (Raycasting)
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    function checkCakeClick(e) {
+        if(currentPhase === 2) {
+            let clientX, clientY;
+            if(e.touches) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Check if we intersect any part of the cakeGroup
+            const intersects = raycaster.intersectObjects(cakeGroup.children, true);
+            if(intersects.length > 0) {
+                transitionToPhase3();
+            }
+        }
+    }
+
+    window.addEventListener('click', checkCakeClick);
+    window.addEventListener('touchstart', checkCakeClick);
+
+    // --- MIC LOGIC ---
+    let audioContext, analyser, microphone;
     async function setupMicrophone() {
         try {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             microphone = audioContext.createMediaStreamSource(stream);
             analyser = audioContext.createAnalyser();
-            
             analyser.fftSize = 512;
-            analyser.smoothingTimeConstant = 0.5;
             microphone.connect(analyser);
-
             detectBlow();
-        } catch (err) {
-            console.log("Microphone access denied or not supported.", err);
-            // Revert back to just clicking the button if mic fails
-        }
+        } catch(e) { console.log(e); }
     }
 
     function detectBlow() {
-        if (flame.classList.contains('blown-out')) return;
-
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(dataArray);
-
-        // Sum lower frequencies (wind noise tends to be low frequency)
-        let sum = 0;
-        for (let i = 0; i < 20; i++) {
-            sum += dataArray[i];
-        }
-        let average = sum / 20;
-
-        // Threshold for blowing (adjust as needed based on testing)
-        if (average > 100) {
-            blowOutCandle();
-        } else {
-            requestAnimationFrame(detectBlow);
-        }
+        if(currentPhase !== 1) return;
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(data);
+        let sum = 0; for(let i=0; i<20; i++) sum += data[i];
+        if(sum/20 > 100) transitionToPhase2();
+        else requestAnimationFrame(detectBlow);
     }
 
-    // Try to setup mic, user usually has to interact first for AudioContext to work
-    blowBtn.addEventListener('mouseover', () => {
-        if(!audioContext) setupMicrophone();
-    });
+    blowBtn.addEventListener('click', () => { if(currentPhase === 1) transitionToPhase2(); });
+    blowBtn.addEventListener('mouseover', () => { if(!audioContext) setupMicrophone(); });
 
-    function blowOutCandle() {
-        if(flame.classList.contains('blown-out')) return;
-
-        flame.classList.add('blown-out');
-        blowBtn.style.opacity = '0';
-        blowBtn.style.pointerEvents = 'none';
-
-        // Wait for smoke animation then transition
-        setTimeout(() => {
-            transitionToPhase2();
-        }, 1500);
-    }
-
-    // ---------------------------------------------------------
-    // Phase Transitions
-    // ---------------------------------------------------------
-
+    // --- TRANSITIONS ---
     function transitionToPhase2() {
-        phase1.style.opacity = '0';
+        if(currentPhase !== 1) return;
+        currentPhase = 2;
+        
+        blowBtn.style.pointerEvents = 'none';
+        blowBtn.style.opacity = '0';
+        document.querySelector('.mic-hint').style.opacity = '0';
+        document.querySelector('#phase-1 h2').style.opacity = '0';
+        
+        // Extinguish flame
+        flame.visible = false;
+        flameLight.intensity = 0;
+
         setTimeout(() => {
             phase1.classList.remove('active');
             phase2.classList.add('active');
-            
-            // Pop effect for cake
-            const cakeContainer = document.querySelector('.cake-container');
-            cakeContainer.style.transform = 'scale(0)';
-            
-            // Allow display change before animating scale
-            requestAnimationFrame(() => {
-                cakeContainer.style.transition = 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)';
-                cakeContainer.style.transform = 'scale(1)';
-                phase2.style.opacity = '1';
-            });
-            
-        }, 1000);
+            cakeLight.intensity = 5;
+        }, 1500);
     }
 
     function transitionToPhase3() {
-        phase2.style.opacity = '0';
+        if(currentPhase !== 2) return;
+        currentPhase = 3;
+        
+        phase2.classList.remove('active');
         triggerConfettiBurst();
-
+        
         setTimeout(() => {
-            phase2.classList.remove('active');
             phase3.classList.add('active');
-            
-            requestAnimationFrame(() => {
-                phase3.style.opacity = '1';
-            });
         }, 1000);
     }
 
-    // ---------------------------------------------------------
-    // Phase 2: The Cake Logic
-    // ---------------------------------------------------------
-
-    cake.addEventListener('click', () => {
-        transitionToPhase3();
-    });
-
-    // ---------------------------------------------------------
-    // Confetti Logic
-    // ---------------------------------------------------------
-
     function triggerConfettiBurst() {
-        const duration = 3000;
-        const end = Date.now() + duration;
-
+        const end = Date.now() + 3000;
         (function frame() {
-            confetti({
-                particleCount: 5,
-                angle: 60,
-                spread: 55,
-                origin: { x: 0 },
-                colors: ['#ffb6c1', '#ffd700', '#ff69b4', '#fff']
-            });
-            confetti({
-                particleCount: 5,
-                angle: 120,
-                spread: 55,
-                origin: { x: 1 },
-                colors: ['#ffb6c1', '#ffd700', '#ff69b4', '#fff']
-            });
-
-            if (Date.now() < end) {
-                requestAnimationFrame(frame);
-            }
+            confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ffb6c1', '#ffd700', '#4d4dff'] });
+            confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#ffb6c1', '#ffd700', '#4d4dff'] });
+            if (Date.now() < end) requestAnimationFrame(frame);
         }());
-
-        // Big center burst
-        confetti({
-            particleCount: 150,
-            spread: 100,
-            origin: { y: 0.6 },
-            colors: ['#ffb6c1', '#ffd700', '#ff69b4', '#fff']
-        });
+        confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
     }
 
-    // ---------------------------------------------------------
-    // Background Canvas Logic (Floating Hearts)
-    // ---------------------------------------------------------
-    function initBackground() {
-        const container = document.getElementById('webgl-container');
-        if(!container) return;
-        
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0xffc0cb, 0.002);
+    // --- ANIMATION LOOP ---
+    let targetCameraY = 8;
+    let targetCameraZ = 25;
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 30;
+    function animate() {
+        requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
 
-        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        particlesMesh.rotation.y = t * 0.05;
+        particlesMesh.rotation.x = t * 0.02;
+
+        if (currentPhase === 1) {
+            // Flicker flame
+            flame.scale.set(1 + Math.sin(t*20)*0.1, 1 + Math.random()*0.2, 1 + Math.sin(t*20)*0.1);
+            flameLight.intensity = 4 + Math.random()*2;
+            
+            // Orbit candle slowly
+            candleGroup.rotation.y = t * 0.5;
+            candleGroup.rotation.x = Math.sin(t) * 0.05;
+            candleGroup.position.y = Math.sin(t * 2) * 0.5 - 2;
+
+            drops.forEach((drop, i) => {
+                drop.position.y -= 0.02;
+                if(drop.position.y < 0) drop.position.y = 8;
+            });
+            
+            // Closer camera for candle
+            targetCameraZ = 18;
+            targetCameraY = 6;
+            
+        } else if (currentPhase === 2) {
+            // Candle sinks
+            candleGroup.position.y -= (candleGroup.position.y + 20) * 0.05;
+            
+            // Cake rises and bounces
+            const targetCakeY = Math.sin(t * 2) * 1 - 2; // subtle bounce
+            cakeGroup.position.y += (targetCakeY - cakeGroup.position.y) * 0.05;
+            
+            // Crazy Cake rotations
+            cakeGroup.rotation.y = t * 0.5;
+            cakeGroup.rotation.x = Math.sin(t * 1.5) * 0.1;
+
+            rings.forEach((r, i) => {
+                r.rotation.y = -t * (i+1.5);
+                r.rotation.x = Math.PI/2 + Math.sin(t * 2 + i)*0.3;
+                r.scale.setScalar(1 + Math.sin(t*4 + i)*0.15); // Pulsing rings
+            });
+            
+            // Move camera back
+            targetCameraZ = 28;
+            targetCameraY = 10;
+            
+        } else if (currentPhase === 3) {
+            // Cake drops into the void
+            cakeGroup.position.y -= (cakeGroup.position.y + 40) * 0.05;
+        }
+
+        camera.position.z += (targetCameraZ - camera.position.z) * 0.05;
+        camera.position.y += (targetCameraY - camera.position.y) * 0.05;
+        camera.lookAt(0, 4, 0);
+
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // Responsive handling
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        container.appendChild(renderer.domElement);
-
-        // Particle System
-        const particleGeometry = new THREE.BufferGeometry();
-        const particleCount = 2000;
-        const posArray = new Float32Array(particleCount * 3);
-        
-        for(let i = 0; i < particleCount * 3; i++) {
-            posArray[i] = (Math.random() - 0.5) * 100;
-        }
-        
-        particleGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        
-        const particleMaterial = new THREE.PointsMaterial({
-            size: 0.2,
-            color: 0xffffff,
-            transparent: true,
-            opacity: 0.8,
-            blending: THREE.AdditiveBlending
-        });
-
-        const particlesMesh = new THREE.Points(particleGeometry, particleMaterial);
-        scene.add(particlesMesh);
-
-        // Floating 3D Shapes (Crazy aesthetic)
-        const shapes = [];
-        const geometries = [
-            new THREE.TorusGeometry(1, 0.3, 16, 100),
-            new THREE.OctahedronGeometry(1.5),
-            new THREE.IcosahedronGeometry(1)
-        ];
-        
-        const shapeMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xffb6c1,
-            metalness: 0.1,
-            roughness: 0.2,
-            transmission: 0.9,
-            thickness: 0.5
-        });
-
-        for(let i = 0; i < 25; i++) {
-            const geometry = geometries[Math.floor(Math.random() * geometries.length)];
-            const mesh = new THREE.Mesh(geometry, shapeMaterial);
-            
-            mesh.position.set(
-                (Math.random() - 0.5) * 60,
-                (Math.random() - 0.5) * 60,
-                (Math.random() - 0.5) * 40 - 10
-            );
-            
-            mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
-            
-            const scale = Math.random() * 2 + 0.5;
-            mesh.scale.set(scale, scale, scale);
-            
-            scene.add(mesh);
-            shapes.push({
-                mesh: mesh,
-                rotSpeedX: (Math.random() - 0.5) * 0.02,
-                rotSpeedY: (Math.random() - 0.5) * 0.02,
-                floatSpeed: (Math.random() - 0.5) * 0.05
-            });
-        }
-
-        // Lights
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-
-        const pointLight1 = new THREE.PointLight(0xff69b4, 2, 100);
-        pointLight1.position.set(0, 0, 20);
-        scene.add(pointLight1);
-        
-        const pointLight2 = new THREE.PointLight(0xffd700, 1, 100);
-        pointLight2.position.set(20, 20, 0);
-        scene.add(pointLight2);
-
-        // Mouse Interactivity
-        let mouseX = 0;
-        let mouseY = 0;
-        
-        document.addEventListener('mousemove', (event) => {
-            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-        });
-
-        // Animation Loop
-        const clock = new THREE.Clock();
-
-        function animate() {
-            requestAnimationFrame(animate);
-            const elapsedTime = clock.getElapsedTime();
-
-            // Rotate particle field
-            particlesMesh.rotation.y = -elapsedTime * 0.05;
-            particlesMesh.rotation.x = elapsedTime * 0.02;
-
-            // Parallax mouse effect
-            camera.position.x += (mouseX * 5 - camera.position.x) * 0.05;
-            camera.position.y += (mouseY * 5 - camera.position.y) * 0.05;
-            camera.lookAt(scene.position);
-
-            // Animate shapes
-            shapes.forEach((obj, index) => {
-                obj.mesh.rotation.x += obj.rotSpeedX;
-                obj.mesh.rotation.y += obj.rotSpeedY;
-                obj.mesh.position.y += Math.sin(elapsedTime * 2 + obj.floatSpeed * 100) * 0.01;
-            });
-
-            renderer.render(scene, camera);
-        }
-
-        animate();
-
-        // Responsive handling
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    }
+    });
 });
